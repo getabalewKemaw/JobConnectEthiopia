@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DashboardEmployer</class>
+ <widget class="QDialog" name="DashboardEmployer">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Employer Dashboard - Job Matching System</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+    QDialog { background-color: #f0f8ff; border: 1px solid #A3BFFA; font-family: Arial, sans-serif; }
+    QLabel { font: 14px "Arial"; color: #2e2e2e; font-weight: bold; padding: 5px; }
+    QTableWidget { background-color: #FFFFFF; border: 1px solid #A3BFFA; border-radius: 5px; font: 14px "Arial"; alternate-background-color: #f5f5f5; gridline-color: #ddd; }
+    QTableWidget::item { padding: 5px; }
+    QHeaderView::section { background-color: #4CAF50; color: white; padding: 5px; border: 1px solid #A3BFFA; }
+    QLineEdit, QTextEdit { background-color: #FFFFFF; border: 1px solid #A3BFFA; border-radius: 5px; padding: 5px; font: 14px "Arial"; placeholder-text-color: #888; }
+    QLineEdit:focus, QTextEdit:focus { border: 2px solid #4C6EF5; }
+    QPushButton { background-color: #4CAF50; color: white; border: none; border-radius: 5px; padding: 8px; font: 14px "Arial"; min-width: 80px; }
+    QPushButton:hover { background-color: #45A049; }
+    QPushButton#logoutButton { background-color: #f44336; }
+    QPushButton#logoutButton:hover { background-color: #da190b; }
+    QComboBox { background-color: #FFFFFF; border: 1px solid #A3BFFA; border-radius: 5px; padding: 5px; font: 14px "Arial"; min-width: 100px; }
+    QSpinBox { background-color: #FFFFFF; border: 1px solid #A3BFFA; border-radius: 5px; padding: 5px; font: 14px "Arial"; }
+    QLabel#licenseStatusLabel { font: bold 14px "Arial"; color: #2D6A4F; background-color: #D1E8E2; padding: 5px; border-radius: 5px; }
+   </string>
+  </property>
+  <widget class="QScrollArea" name="scrollArea">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>20</y>
+     <width>760</width>
+     <height>760</height>
+    </rect>
+   </property>
+   <property name="widgetResizable">
+    <bool>true</bool>
+   </property>
+   <property name="horizontalScrollBarPolicy">
+    <enum>Qt::ScrollBarAlwaysOff</enum>
+   </property>
+   <property name="verticalScrollBarPolicy">
+    <enum>Qt::ScrollBarAsNeeded</enum>
+   </property>
+   <widget class="QWidget" name="scrollAreaWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>10</number>
+     </property>
+     <property name="leftMargin">
+      <number>10</number>
+     </property>
+     <property name="topMargin">
+      <number>10</number>
+     </property>
+     <property name="rightMargin">
+      <number>10</number>
+     </property>
+     <property name="bottomMargin">
+      <number>10</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="titleLabel">
+       <property name="styleSheet">
+        <string notr="true">font: bold 24px "Arial"; color: #2D6A4F; background-color: #D1E8E2; border-radius: 5px; padding: 10px;</string>
+       </property>
+       <property name="text">
+        <string>Employer Dashboard</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignmentFlag::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="licenseStatusLabel">
+       <property name="text">
+        <string>License Verification Status: Not Verified</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_1">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>15</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="postJobLabel">
+       <property name="styleSheet">
+        <string notr="true">font: bold 18px "Arial"; color: #2E4053; background-color: #D1E8E2; padding: 5px;</string>
+       </property>
+       <property name="text">
+        <string>Post a New Job</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QFormLayout" name="postJobForm">
+       <property name="labelAlignment">
+        <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+       </property>
+       <property name="formAlignment">
+        <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+       </property>
+       <property name="horizontalSpacing">
+        <number>10</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>10</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="jobTitleLabel">
+         <property name="text">
+          <string>Job Title:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="jobTitleLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter job title (e.g., Software Engineer)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="descriptionLabel">
+         <property name="text">
+          <string>Description:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QTextEdit" name="descriptionTextEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>60</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter detailed job description (e.g., responsibilities, tools)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="experienceLabel">
+         <property name="text">
+          <string>Experience (Years):</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QSpinBox" name="experienceSpinBox">
+         <property name="minimum">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <number>50</number>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="salaryLabel">
+         <property name="text">
+          <string>Salary Range:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="salaryLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter salary range (e.g., $60,000-$80,000)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="deadlineLabel">
+         <property name="text">
+          <string>Deadline:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="deadlineLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter deadline (e.g., 2025-06-30)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="locationLabel">
+         <property name="text">
+          <string>Location:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="locationLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter location (e.g., Nairobi, Kenya)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="jobTypeLabel">
+         <property name="text">
+          <string>Job Type:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QComboBox" name="jobTypeComboBox">
+         <item>
+          <property name="text">
+           <string>Full-Time</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Part-Time</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Contract</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="workModeLabel">
+         <property name="text">
+          <string>Work Mode:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QComboBox" name="workModeComboBox">
+         <item>
+          <property name="text">
+           <string>On-Site</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Remote</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Hybrid</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="industryLabel">
+         <property name="text">
+          <string>Industry:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLineEdit" name="industryLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter industry (e.g., Technology)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="skillsLabel">
+         <property name="text">
+          <string>Skills Required:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QTextEdit" name="skillsTextEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>60</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter required skills (e.g., Python, SQL, Communication)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="1">
+        <widget class="QPushButton" name="postJobButton">
+         <property name="text">
+          <string>Post Job</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>15</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="applicantsLabel">
+       <property name="styleSheet">
+        <string notr="true">font: bold 18px "Arial"; color: #2E4053; background-color: #D1E8E2; padding: 5px;</string>
+       </property>
+       <property name="text">
+        <string>View Applicants</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="applicantControls">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLineEdit" name="searchApplicantLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Search by Seeker ID or Name</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="searchApplicantButton">
+         <property name="text">
+          <string>Search</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="sortApplicantComboBox">
+         <item>
+          <property name="text">
+           <string>Sort by ID (Asc)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Sort by ID (Desc)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Sort by Name (Asc)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Sort by Name (Desc)</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="applicantsTable">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="columnCount">
+        <number>5</number>
+       </property>
+       <column>
+        <property name="text">
+         <string>Job ID</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Seeker ID</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Full Name</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Status</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Action</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="shortlistLayout">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <item>
+        <widget class="QLineEdit" name="shortlistSeekerIdLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter Seeker ID to Shortlist</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="shortlistButton">
+         <property name="text">
+          <string>Shortlist</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>15</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="notificationsLabel">
+       <property name="styleSheet">
+        <string notr="true">font: bold 18px "Arial"; color: #2E4053; background-color: #D1E8E2; padding: 5px;</string>
+       </property>
+       <property name="text">
+        <string>Notifications</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="notificationsTable">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>100</height>
+        </size>
+       </property>
+       <property name="columnCount">
+        <number>4</number>
+       </property>
+       <column>
+        <property name="text">
+         <string>Notification ID</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Message</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Created At</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Read</string>
+        </property>
+       </column>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer_4">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>15</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="logoutButton">
+       <property name="text">
+        <string>Logout</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>logoutButton</sender>
+   <signal>clicked()</signal>
+   <receiver>DashboardEmployer</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>759</x>
+     <y>689</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>699</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

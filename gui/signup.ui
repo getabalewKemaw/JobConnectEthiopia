@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SignUp</class>
+ <widget class="QDialog" name="SignUp">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Sign Up - Job Matching System</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+    QDialog {
+        background-color: #E6F0FA; /* Light blue background */
+    }
+    QLabel {
+        font: 14px "Arial";
+        color: #2E4053; /* Dark slate color for text */
+    }
+    QLineEdit {
+        background-color: #FFFFFF;
+        border: 1px solid #A3BFFA;
+        border-radius: 5px;
+        padding: 5px;
+        font: 14px "Arial";
+    }
+    QLineEdit:focus {
+        border: 2px solid #4C6EF5; /* Vibrant blue on focus */
+    }
+    QComboBox {
+        background-color: #FFFFFF;
+        border: 1px solid #A3BFFA;
+        border-radius: 5px;
+        padding: 5px;
+        font: 14px "Arial";
+    }
+    QComboBox:hover {
+        background-color: #F0F4FF;
+    }
+    QPushButton {
+        background-color: #4CAF50; /* Green for buttons */
+        color: white;
+        border-radius: 5px;
+        padding: 8px;
+        font: 14px "Arial";
+    }
+    QPushButton:hover {
+        background-color: #45A049; /* Slightly darker green on hover */
+    }
+    QPushButton#cancelButton {
+        background-color: #FF6B6B; /* Red for cancel button */
+    }
+    QPushButton#cancelButton:hover {
+        background-color: #FF5252; /* Slightly darker red on hover */
+    }
+   </string>
+  </property>
+  <widget class="QWidget" name="verticalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>20</y>
+     <width>360</width>
+     <height>560</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QLabel" name="titleLabel">
+      <property name="text">
+       <string>Create Your Account</string>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">
+        font: bold 20px "Arial";
+        color: #2D6A4F; /* Dark green for title */
+       </string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacer_1">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QLabel" name="roleLabel">
+      <property name="text">
+       <string>I am a:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="roleComboBox">
+      <item>
+       <property name="text">
+        <string>Job Seeker</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Employer</string>
+       </property>
+      </item>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="emailLabel">
+      <property name="text">
+       <string>Email:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="emailLineEdit">
+      <property name="placeholderText">
+       <string>Enter your email</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="passwordLabel">
+      <property name="text">
+       <string>Password:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="passwordLineEdit">
+      <property name="echoMode">
+       <enum>QLineEdit::Password</enum>
+      </property>
+      <property name="placeholderText">
+       <string>Enter your password</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="fullNameLabel">
+      <property name="text">
+       <string>Full Name:</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="fullNameLineEdit">
+      <property name="placeholderText">
+       <string>Enter your full name</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="companyNameLabel">
+      <property name="text">
+       <string>Company Name:</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="companyNameLineEdit">
+      <property name="placeholderText">
+       <string>Enter your company name</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="licenseNumberLabel">
+      <property name="text">
+       <string>License Number:</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="licenseNumberLineEdit">
+      <property name="placeholderText">
+       <string>Enter your license number</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="websiteLabel">
+      <property name="text">
+       <string>Website (Optional):</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="websiteLineEdit">
+      <property name="placeholderText">
+       <string>Enter your website</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="industryLabel">
+      <property name="text">
+       <string>Industry:</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="industryLineEdit">
+      <property name="placeholderText">
+       <string>Enter your industry</string>
+      </property>
+      <property name="visible">
+       <bool>false</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QPushButton" name="backButton">
+        <property name="text">
+         <string>Back</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="submitButton">
+        <property name="text">
+         <string>Submit</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cancelButton">
+        <property name="text">
+         <string>Cancel</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>cancelButton</sender>
+   <signal>clicked()</signal>
+   <receiver>SignUp</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>359</x>
+     <y>589</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>199</x>
+     <y>599</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

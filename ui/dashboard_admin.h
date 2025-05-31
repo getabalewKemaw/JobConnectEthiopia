@@ -41,7 +41,9 @@ private:
     UserNode* jobSeekerHead;
     void initializeLinkedLists();
     void addToLinkedList(UserNode*& head, int userId, const QString& name, bool isEmployer);
-    void sortLinkedList(UserNode*& head, bool ascending, bool byId);
+    void mergeSort(UserNode** headRef, bool ascending, bool byId); // Added for Merge Sort
+    void splitList(UserNode* head, UserNode** left, UserNode** right); // Added for Merge Sort
+    UserNode* merge(UserNode* left, UserNode* right, bool ascending, bool byId); // Added for Merge Sort
     void displayLinkedList(UserNode* head, QTableWidget* table);
 };
 

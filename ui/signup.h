@@ -16,6 +16,10 @@ public:
     explicit SignUp(QWidget *parent = nullptr);
     ~SignUp();
 
+signals:
+    void userSignedUp(const QString& firstName, const QString& lastName, const QString& role);
+    void showLogin(); // Signal to show LoginUI
+
 private slots:
     void on_submitButton_clicked();  // Handles form submission
     void on_roleComboBox_currentIndexChanged(int index);  // Toggles Employer fields
@@ -27,6 +31,7 @@ private:
     void setupConnections();
     bool validateInputs();
     void clearFields();
+    bool ensureDatabaseConnection(); // Added to manage DB connection
 };
 
 #endif // SIGNUP_H

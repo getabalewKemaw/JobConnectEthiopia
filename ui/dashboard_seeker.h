@@ -23,7 +23,8 @@ private slots:
     void on_updateProfileButton_clicked();
     void on_searchButton_clicked();
     void on_sortComboBox_currentIndexChanged(int index);
-    void on_applicationsTable_cellClicked(int row, int column); // Added missing slot
+    void on_applicationsTable_cellClicked(int row, int column);
+    void on_jobsTable_cellClicked(int row, int column);
 
 private:
     Ui::DashboardSeeker *ui;
@@ -37,7 +38,11 @@ private:
     void initializeLinkedList();
     void addToLinkedList(int jobId, const QString& title, const QString& company, const QString& location, const QString& salary, const QString& deadline);
     void sortLinkedList(bool bySalary, bool ascending);
+    void mergeSort(JobNode** headRef, bool bySalary, bool ascending);
+    void splitList(JobNode* head, JobNode** left, JobNode** right);
+    JobNode* merge(JobNode* left, JobNode* right, bool bySalary, bool ascending);
     void displayLinkedList();
+    void updateWelcomeLabel(const QString& fullName); // Updated to take fullName argument
 };
 
 #endif // DASHBOARD_SEEKER_H

@@ -11,8 +11,6 @@ namespace Ui {
 class DashboardEmployer;
 }
 
-
-
 struct Applicant {
     int applicationId;
     int jobId;
@@ -31,6 +29,7 @@ public:
     explicit DashboardEmployer(QWidget *parent = nullptr);
     ~DashboardEmployer();
     void setEmployerUserId(int userId);
+    void setLoggedInUser(const QString& fullName);
 
 private slots:
     void on_postJobButton_clicked();
@@ -38,6 +37,7 @@ private slots:
     void on_searchApplicantButton_clicked();
     void on_sortApplicantComboBox_currentIndexChanged(int index);
     void on_applicantsTable_cellClicked(int row, int column);
+    void on_searchApplicantLineEdit_textChanged(const QString& text); // For search suggestions
 
 private:
     Ui::DashboardEmployer *ui;
@@ -45,6 +45,7 @@ private:
     int employerUserId;
     JobNode* jobHead; // Use the existing JobNode from job_node.h
     Applicant* applicantHead;
+    QString loggedInUser;
 
     void initializeStructures();
     void addJobNode(int jobId, const QString& title, const QString& description, int experienceRequired,
@@ -54,6 +55,10 @@ private:
     void displayApplicantStack(QTableWidget* table); // Ensure correct parameter type
     void loadApplicantsTable();
     void loadNotificationsTable();
+    void updateWelcomeLabel();
+    void mergeSort(Applicant** headRef, bool ascending, bool byId);
+    void splitList(Applicant* head, Applicant** left, Applicant** right);
+    Applicant* merge(Applicant* left, Applicant* right, bool ascending, bool byId);
 };
 
 #endif // DASHBOARDEMPLOYER_H

@@ -2,6 +2,7 @@
 #include "ui_login.h"
 #include <QMessageBox>
 #include "core/auth.h"
+#include <QCryptographicHash>
 
 Login::Login(QWidget *parent) :
     QDialog(parent),
@@ -40,8 +41,11 @@ void Login::on_loginButton_clicked()
         return;
     }
 
+    // Hash the password using SHA-256 to match the signup process
+    QString hashedPassword = QString(QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Sha256).toHex());
+
     Auth auth;
-    if (!auth.login(email, password, userRole)) {
+    if (!auth.login(email, hashedPassword, userRole)) {
         ui->statusLabel->setText("Invalid email or password, or account is blocked.");
         return;
     }
@@ -53,7 +57,8 @@ void Login::on_loginButton_clicked()
 
 void Login::on_backButton_clicked()
 {
-    reject();
+    emit showSignUp(); // Emit signal to show SignUp dialog
+    reject(); // Close the login dialog
 }
 
 void Login::clearFields()

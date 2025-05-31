@@ -18,6 +18,9 @@ public:
     QString getRole() const;
     QString getEmail() const;
 
+signals:
+    void showSignUp(); // Signal to show SignUp dialog
+
 private slots:
     void on_loginButton_clicked();
     void on_backButton_clicked();

@@ -40,16 +40,24 @@
      <height>760</height>
     </rect>
    </property>
+   <property name="verticalScrollBarPolicy">
+    <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+   </property>
+   <property name="horizontalScrollBarPolicy">
+    <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+   </property>
    <property name="widgetResizable">
     <bool>true</bool>
    </property>
-   <property name="horizontalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="verticalScrollBarPolicy">
-    <enum>Qt::ScrollBarAsNeeded</enum>
-   </property>
    <widget class="QWidget" name="scrollAreaWidgetContents">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>741</width>
+      <height>1177</height>
+     </rect>
+    </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <property name="spacing">
       <number>10</number>
@@ -72,7 +80,7 @@
         <string notr="true">font: bold 24px "Arial"; color: #2D6A4F; background-color: #D1E8E2; border-radius: 5px; padding: 10px;</string>
        </property>
        <property name="text">
-        <string>Employer Dashboard</string>
+        <string>Employer Dashboard - Welcome [User]</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -335,7 +343,21 @@
          </property>
         </widget>
        </item>
+       <item row="10" column="0">
+        <widget class="QLabel" name="fileUploadLabel">
+         <property name="text">
+          <string>Upload File (PDF/Description):</string>
+         </property>
+        </widget>
+       </item>
        <item row="10" column="1">
+        <widget class="QPushButton" name="fileUploadButton">
+         <property name="text">
+          <string>Upload File</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
         <widget class="QPushButton" name="postJobButton">
          <property name="text">
           <string>Post Job</string>

@@ -6,6 +6,8 @@
 #include <QInputDialog>
 #include <QDate>
 #include <QRegularExpression>
+#include <QFileDialog>
+#include <QTextStream>
 
 DashboardSeeker::DashboardSeeker(QWidget *parent) :
     QDialog(parent),
@@ -15,7 +17,6 @@ DashboardSeeker::DashboardSeeker(QWidget *parent) :
     jobHead(nullptr)
 {
     ui->setupUi(this);
-
 
     setStyleSheet(
         "QPushButton { "
@@ -73,12 +74,11 @@ DashboardSeeker::DashboardSeeker(QWidget *parent) :
         "   border-radius: 8px; "
         "}"
         "QLabel#titleLabel { font: bold 24px 'Arial'; color: #2D6A4F; background-color: #D1E8E2; border-radius: 5px; padding: 10px; }"
-        "QLabel#postJobLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
-        "QLabel#applicantsLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
-        "QLabel#notificationsLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
-        "QLabel#licenseStatusLabel { font: bold 14px 'Arial'; color: #2D6A4F; background-color: #D1E8E2; padding: 5px; border-radius: 5px; }"
+        "QLabel#profileLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
+        "QLabel#jobsLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
+        "QLabel#applicationsLabel { font: bold 18px 'Arial'; color: #2E4053; background-color: #D1E8E2; padding: 5px; }"
+        "QLabel#profileStatusLabel { font: bold 14px 'Arial'; color: #2D6A4F; background-color: #D1E8E2; padding: 5px; border-radius: 5px; }"
         );
-    // ui->verticalLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
     adjustSize();
 
     initializeLinkedList();
@@ -91,6 +91,7 @@ DashboardSeeker::DashboardSeeker(QWidget *parent) :
             this, &DashboardSeeker::on_sortComboBox_currentIndexChanged);
     connect(ui->logoutButton, &QPushButton::clicked, this, &DashboardSeeker::reject);
     connect(ui->applicationsTable, &QTableWidget::cellClicked, this, &DashboardSeeker::on_applicationsTable_cellClicked);
+    connect(ui->jobsTable, &QTableWidget::cellClicked, this, &DashboardSeeker::on_jobsTable_cellClicked);
 }
 
 DashboardSeeker::~DashboardSeeker()
@@ -125,40 +126,66 @@ void DashboardSeeker::addToLinkedList(int jobId, const QString& title, const QSt
     jobHead = newNode;
 }
 
+void DashboardSeeker::mergeSort(JobNode** headRef, bool bySalary, bool ascending)
+{
+    JobNode* head = *headRef;
+    if (!head || !head->next) return;
+
+    JobNode *left, *right;
+    splitList(head, &left, &right);
+
+    mergeSort(&left, bySalary, ascending);
+    mergeSort(&right, bySalary, ascending);
+
+    *headRef = merge(left, right, bySalary, ascending);
+}
+
+void DashboardSeeker::splitList(JobNode* head, JobNode** left, JobNode** right)
+{
+    JobNode *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    *left = head;
+    *right = slow->next;
+    slow->next = nullptr;
+}
+
+JobNode* DashboardSeeker::merge(JobNode* left, JobNode* right, bool bySalary, bool ascending)
+{
+    if (!left) return right;
+    if (!right) return left;
+
+    JobNode* result = nullptr;
+    bool condition;
+    if (bySalary) {
+        QStringList leftRange = left->salaryRange.split("-");
+        QStringList rightRange = right->salaryRange.split("-");
+        if (leftRange.size() != 2 || rightRange.size() != 2) return left;
+        int leftLow = leftRange[0].remove("$").remove(",").toInt();
+        int rightLow = rightRange[0].remove("$").remove(",").toInt();
+        condition = ascending ? (leftLow <= rightLow) : (leftLow >= rightLow);
+    } else {
+        QDate leftDate = QDate::fromString(left->deadline, "yyyy-MM-dd");
+        QDate rightDate = QDate::fromString(right->deadline, "yyyy-MM-dd");
+        condition = ascending ? (leftDate <= rightDate) : (leftDate >= rightDate);
+    }
+
+    if (condition) {
+        result = left;
+        result->next = merge(left->next, right, bySalary, ascending);
+    } else {
+        result = right;
+        result->next = merge(left, right->next, bySalary, ascending);
+    }
+    return result;
+}
+
 void DashboardSeeker::sortLinkedList(bool bySalary, bool ascending)
 {
-    if (!jobHead || !jobHead->next) return;
-
-    JobNode* sorted = nullptr;
-    while (jobHead) {
-        JobNode* current = jobHead;
-        jobHead = jobHead->next;
-        JobNode** link = &sorted;
-
-        while (*link) {
-            bool condition;
-            if (bySalary) {
-                QStringList currentRange = current->salaryRange.split("-");
-                QStringList linkRange = (*link)->salaryRange.split("-");
-                if (currentRange.size() != 2 || linkRange.size() != 2) {
-                    condition = false;
-                } else {
-                    int currentLow = currentRange[0].remove("$").remove(",").toInt();
-                    int linkLow = linkRange[0].remove("$").remove(",").toInt();
-                    condition = ascending ? (currentLow < linkLow) : (currentLow > linkLow);
-                }
-            } else {
-                QDate currentDeadline = QDate::fromString(current->deadline, "yyyy-MM-dd");
-                QDate linkDeadline = QDate::fromString((*link)->deadline, "yyyy-MM-dd");
-                condition = ascending ? (currentDeadline < linkDeadline) : (currentDeadline > linkDeadline);
-            }
-            if (condition) break;
-            link = &(*link)->next;
-        }
-        current->next = *link;
-        *link = current;
-    }
-    jobHead = sorted;
+    mergeSort(&jobHead, bySalary, ascending);
 }
 
 void DashboardSeeker::displayLinkedList()
@@ -174,7 +201,7 @@ void DashboardSeeker::displayLinkedList()
         ui->jobsTable->setItem(row, 3, new QTableWidgetItem(current->location));
         ui->jobsTable->setItem(row, 4, new QTableWidgetItem(current->salaryRange));
         ui->jobsTable->setItem(row, 5, new QTableWidgetItem(current->deadline));
-        ui->jobsTable->setItem(row, 6, new QTableWidgetItem("Apply"));
+        ui->jobsTable->setItem(row, 6, new QTableWidgetItem("View Details"));
         current = current->next;
     }
 }
@@ -230,26 +257,30 @@ void DashboardSeeker::loadProfile()
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT full_name, location, phone, education, skills, work_experience "
-                  "FROM JobSeekers WHERE seeker_id = :seeker_id");
+    query.prepare("SELECT u.first_name, u.last_name, js.location, js.phone, js.education, js.skills, js.work_experience "
+                  "FROM JobSeekers js "
+                  "JOIN Users u ON js.user_id = u.user_id "
+                  "WHERE js.seeker_id = :seeker_id");
     query.bindValue(":seeker_id", seekerUserId);
 
     if (query.exec() && query.next()) {
-        ui->fullNameLineEdit->setText(query.value("full_name").toString());
+        QString fullName = query.value("first_name").toString() + " " + query.value("last_name").toString();
+        ui->fullNameLineEdit->setText(fullName);
         ui->locationLineEdit->setText(query.value("location").toString());
         ui->phoneLineEdit->setText(query.value("phone").toString());
         ui->educationTextEdit->setText(query.value("education").toString());
         ui->skillsTextEdit->setText(query.value("skills").toString());
         ui->workExperienceTextEdit->setText(query.value("work_experience").toString());
+        updateWelcomeLabel(fullName); // Pass fullName directly
     } else {
         QMessageBox::warning(this, "Profile Error", "Failed to load profile data: " + query.lastError().text());
-        // Set placeholders or default values if data isn't available
         ui->fullNameLineEdit->setPlaceholderText("Enter Full Name (e.g., John Doe)");
         ui->locationLineEdit->setPlaceholderText("Enter Location (e.g., Nairobi, Kenya)");
         ui->phoneLineEdit->setPlaceholderText("Enter Phone Number (e.g., +254 712 345 678)");
         ui->educationTextEdit->setPlaceholderText("Enter Education (e.g., B.Sc. Computer Science, University of Nairobi, 2020)");
         ui->skillsTextEdit->setPlaceholderText("Enter Skills (e.g., Python, SQL, Communication)");
         ui->workExperienceTextEdit->setPlaceholderText("Enter Work Experience (e.g., Software Developer at XYZ Corp, 2021-2023)");
+        updateWelcomeLabel(""); // Fallback to empty name
     }
 }
 
@@ -284,6 +315,15 @@ void DashboardSeeker::loadApplicationsTable()
     }
 }
 
+void DashboardSeeker::updateWelcomeLabel(const QString& fullName)
+{
+    if (!fullName.isEmpty()) {
+        ui->titleLabel->setText(QString("Job Seeker Dashboard - Welcome %1").arg(fullName));
+    } else {
+        ui->titleLabel->setText("Job Seeker Dashboard");
+    }
+}
+
 void DashboardSeeker::on_applyButton_clicked()
 {
     int selectedRow = ui->jobsTable->currentRow();
@@ -305,7 +345,6 @@ void DashboardSeeker::on_applyButton_clicked()
         return;
     }
 
-    // Verify jobId exists in Jobs table
     QSqlQuery jobCheckQuery(db);
     jobCheckQuery.prepare("SELECT COUNT(*) FROM Jobs WHERE job_id = :job_id");
     jobCheckQuery.bindValue(":job_id", jobId);
@@ -314,17 +353,6 @@ void DashboardSeeker::on_applyButton_clicked()
         return;
     }
 
-    // Check for duplicate application
-    QSqlQuery checkQuery(db);
-    checkQuery.prepare("SELECT COUNT(*) FROM Applications WHERE job_id = :job_id AND seeker_id = :seeker_id");
-    checkQuery.bindValue(":job_id", jobId);
-    checkQuery.bindValue(":seeker_id", seekerUserId);
-    if (checkQuery.exec() && checkQuery.next() && checkQuery.value(0).toInt() > 0) {
-        QMessageBox::warning(this, "Duplicate Application", "You have already applied for this job.");
-        return;
-    }
-
-    // Detailed application form with validation
     QString coverLetter = QInputDialog::getMultiLineText(this, tr("Application Form"),
                                                          tr("Cover Letter (min 50 chars):"),
                                                          "Dear Hiring Manager,\n\nI am excited to apply for this position...\n\nSincerely,\n[Your Name]");
@@ -350,7 +378,20 @@ void DashboardSeeker::on_applyButton_clicked()
     QString applicationDetails = QString("Cover Letter:\n%1\n\nWhy do you want to work here?\n%2\n\nRelevant Experience:\n%3")
                                      .arg(coverLetter).arg(question1).arg(question2);
 
-    // Insert application into database
+    // Resume upload
+    QString resumePath = QFileDialog::getOpenFileName(this, tr("Upload Resume"), "", tr("Files (*.pdf *.doc *.docx)"));
+    if (!resumePath.isEmpty()) {
+        QFile file(resumePath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            applicationDetails += QString("\n\nResume Content:\n%1").arg(in.readAll());
+            file.close();
+        } else {
+            QMessageBox::warning(this, "File Error", "Could not read the resume file.");
+            return;
+        }
+    }
+
     QSqlQuery query(db);
     query.prepare("INSERT INTO Applications (job_id, seeker_id, status, application_details, applied_at) "
                   "VALUES (:job_id, :seeker_id, :status, :application_details, :applied_at)");
@@ -366,7 +407,6 @@ void DashboardSeeker::on_applyButton_clicked()
         return;
     }
 
-    // Verify the application was stored
     QSqlQuery verifyQuery(db);
     verifyQuery.prepare("SELECT application_id FROM Applications WHERE job_id = :job_id AND seeker_id = :seeker_id AND application_details = :details");
     verifyQuery.bindValue(":job_id", jobId);
@@ -377,7 +417,6 @@ void DashboardSeeker::on_applyButton_clicked()
         return;
     }
 
-    // Fetch the employer associated with the job and send a notification
     QSqlQuery employerQuery(db);
     employerQuery.prepare("SELECT j.employer_id, e.user_id, j.title "
                           "FROM Jobs j "
@@ -431,10 +470,9 @@ void DashboardSeeker::on_updateProfileButton_clicked()
     }
 
     QSqlQuery query(db);
-    query.prepare("UPDATE JobSeekers SET full_name = :full_name, location = :location, phone = :phone, "
+    query.prepare("UPDATE JobSeekers SET location = :location, phone = :phone, "
                   "education = :education, skills = :skills, work_experience = :work_experience "
                   "WHERE seeker_id = :seeker_id");
-    query.bindValue(":full_name", fullName);
     query.bindValue(":location", location);
     query.bindValue(":phone", phone);
     query.bindValue(":education", education);
@@ -447,7 +485,21 @@ void DashboardSeeker::on_updateProfileButton_clicked()
         return;
     }
 
+    QSqlQuery userQuery(db);
+    userQuery.prepare("UPDATE Users SET first_name = :first_name, last_name = :last_name "
+                      "WHERE user_id = (SELECT user_id FROM JobSeekers WHERE seeker_id = :seeker_id)");
+    QStringList nameParts = fullName.split(" ", Qt::SkipEmptyParts);
+    QString firstName = nameParts.value(0, "");
+    QString lastName = nameParts.value(1, "");
+    userQuery.bindValue(":first_name", firstName);
+    userQuery.bindValue(":last_name", lastName);
+    userQuery.bindValue(":seeker_id", seekerUserId);
+    if (!userQuery.exec()) {
+        QMessageBox::warning(this, "Update Error", "Failed to update user name: " + userQuery.lastError().text());
+    }
+
     QMessageBox::information(this, "Success", "Profile updated successfully!");
+    loadProfile();
 }
 
 void DashboardSeeker::on_searchButton_clicked()
@@ -470,7 +522,7 @@ void DashboardSeeker::on_searchButton_clicked()
             ui->jobsTable->setItem(row, 3, new QTableWidgetItem(current->location));
             ui->jobsTable->setItem(row, 4, new QTableWidgetItem(current->salaryRange));
             ui->jobsTable->setItem(row, 5, new QTableWidgetItem(current->deadline));
-            ui->jobsTable->setItem(row, 6, new QTableWidgetItem("Apply"));
+            ui->jobsTable->setItem(row, 6, new QTableWidgetItem("View Details"));
         }
         current = current->next;
     }
@@ -503,6 +555,31 @@ void DashboardSeeker::on_applicationsTable_cellClicked(int row, int column)
             QMessageBox::information(this, "Application Details", details);
         } else {
             QMessageBox::warning(this, "Error", "Could not load application details: " + query.lastError().text());
+        }
+    }
+}
+
+void DashboardSeeker::on_jobsTable_cellClicked(int row, int column)
+{
+    if (column == 6 && ui->jobsTable->item(row, 6)->text() == "View Details") {
+        int jobId = ui->jobsTable->item(row, 0)->text().toInt();
+        QSqlDatabase db = dbManager->getDatabase();
+        if (!db.isOpen()) {
+            QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
+            return;
+        }
+
+        QSqlQuery query(db);
+        query.prepare("SELECT description FROM Jobs WHERE job_id = :job_id");
+        query.bindValue(":job_id", jobId);
+        if (query.exec() && query.next()) {
+            QString description = query.value("description").toString();
+            if (description.contains("[PNG File Uploaded")) {
+                description += "\n\n[Sample PNG]: https://via.placeholder.com/150.png";
+            }
+            QMessageBox::information(this, "Job Details", description);
+        } else {
+            QMessageBox::warning(this, "Error", "Could not load job details: " + query.lastError().text());
         }
     }
 }

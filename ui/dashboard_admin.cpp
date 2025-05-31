@@ -62,24 +62,54 @@ void DashboardAdmin::addToLinkedList(UserNode*& head, int userId, const QString&
     }
 }
 
-void DashboardAdmin::sortLinkedList(UserNode*& head, bool ascending, bool byId)
+void DashboardAdmin::mergeSort(UserNode** headRef, bool ascending, bool byId)
 {
+    UserNode* head = *headRef;
     if (!head || !head->next) return;
 
-    UserNode* sorted = nullptr;
-    while (head) {
-        UserNode* current = head;
-        head = head->next;
-        UserNode** link = &sorted;
-        while (*link && ((ascending ?
-                              (byId ? (*link)->userId < current->userId : (*link)->name < current->name) :
-                              (byId ? (*link)->userId > current->userId : (*link)->name > current->name)))) {
-            link = &(*link)->next;
-        }
-        current->next = *link;
-        *link = current;
+    UserNode *left, *right;
+    splitList(head, &left, &right);
+
+    mergeSort(&left, ascending, byId);
+    mergeSort(&right, ascending, byId);
+
+    *headRef = merge(left, right, ascending, byId);
+}
+
+void DashboardAdmin::splitList(UserNode* head, UserNode** left, UserNode** right)
+{
+    UserNode *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
     }
-    head = sorted;
+
+    *left = head;
+    *right = slow->next;
+    slow->next = nullptr;
+}
+
+DashboardAdmin::UserNode* DashboardAdmin::merge(UserNode* left, UserNode* right, bool ascending, bool byId)
+{
+    if (!left) return right;
+    if (!right) return left;
+
+    UserNode* result = nullptr;
+    bool condition;
+    if (byId) {
+        condition = ascending ? (left->userId <= right->userId) : (left->userId >= right->userId);
+    } else {
+        condition = ascending ? (left->name <= right->name) : (left->name >= right->name);
+    }
+
+    if (condition) {
+        result = left;
+        result->next = merge(left->next, right, ascending, byId);
+    } else {
+        result = right;
+        result->next = merge(left, right->next, ascending, byId);
+    }
+    return result;
 }
 
 void DashboardAdmin::displayLinkedList(UserNode* head, QTableWidget* table)
@@ -175,7 +205,7 @@ void DashboardAdmin::loadJobSeekerTable()
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT u.user_id, js.seeker_id, js.full_name, js.location, js.phone, u.is_active "
+    query.prepare("SELECT u.user_id, js.seeker_id, u.first_name, u.last_name, js.location, js.phone, u.is_active "
                   "FROM Users u JOIN JobSeekers js ON u.user_id = js.user_id WHERE u.role = 'job_seeker'");
     ui->jobSeekerTable->setRowCount(0);
 
@@ -189,7 +219,7 @@ void DashboardAdmin::loadJobSeekerTable()
     if (query.exec()) {
         while (query.next()) {
             int userId = query.value("user_id").toInt();
-            QString fullName = query.value("full_name").toString();
+            QString fullName = query.value("first_name").toString() + " " + query.value("last_name").toString();
             addToLinkedList(jobSeekerHead, userId, fullName, false);
             int row = ui->jobSeekerTable->rowCount();
             ui->jobSeekerTable->insertRow(row);
@@ -405,8 +435,8 @@ void DashboardAdmin::on_sortComboBox_currentIndexChanged(int index)
 {
     bool ascending = (index == 0 || index == 2);
     bool byId = (index == 0 || index == 1);
-    sortLinkedList(employerHead, ascending, byId);
-    sortLinkedList(jobSeekerHead, ascending, byId);
+    mergeSort(&employerHead, ascending, byId);
+    mergeSort(&jobSeekerHead, ascending, byId);
     displayLinkedList(employerHead, ui->employerTable);
     displayLinkedList(jobSeekerHead, ui->jobSeekerTable);
 }

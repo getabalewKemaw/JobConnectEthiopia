@@ -20,28 +20,28 @@
         border: 1px solid #A3BFFA;
     }
     QLabel {
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
         color: #2E4053; /* Dark slate color for text */
     }
     QTableWidget {
         background-color: #FFFFFF;
         border: 1px solid #A3BFFA;
         border-radius: 5px;
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
     }
     QLineEdit {
         background-color: #FFFFFF;
         border: 1px solid #A3BFFA;
         border-radius: 5px;
         padding: 5px;
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
     }
     QPushButton {
         background-color: #4CAF50; /* Vibrant green for buttons */
         color: white;
         border-radius: 5px;
         padding: 8px;
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
     }
     QPushButton:hover {
         background-color: #45A049; /* Darker green on hover */
@@ -57,7 +57,7 @@
         border: 1px solid #A3BFFA;
         border-radius: 5px;
         padding: 5px;
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
     }
    </string>
   </property>
@@ -75,7 +75,7 @@
      <widget class="QLabel" name="titleLabel">
       <property name="styleSheet">
        <string notr="true">
-        font: bold 24px "Arial";
+        font: bold 24px &quot;Arial&quot;;
         color: #2D6A4F; /* Rich green for title */
         background-color: #D1E8E2; /* Soft green background */
         border-radius: 5px;
@@ -107,7 +107,7 @@
      <widget class="QLabel" name="statsLabel">
       <property name="styleSheet">
        <string notr="true">
-        font: bold 18px "Arial";
+        font: bold 18px &quot;Arial&quot;;
         color: #2E4053;
         background-color: #D1E8E2;
         padding: 5px;
@@ -122,7 +122,7 @@
      <widget class="QLabel" name="statsDisplayLabel">
       <property name="styleSheet">
        <string notr="true">
-        font: 14px "Arial";
+        font: 14px &quot;Arial&quot;;
         color: #2E4053;
         background-color: #FFFFFF;
         border-radius: 5px;
@@ -195,7 +195,7 @@
     <item>
      <widget class="QTabWidget" name="userTabs">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="employersTab">
        <attribute name="title">

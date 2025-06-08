@@ -188,3 +188,32 @@ select *from JobSeekers;
 
 ALTER TABLE Applications
 ADD COLUMN IF NOT EXISTS application_details TEXT;
+
+
+select * from jobseekers;
+
+
+select * from Employers;
+select * from Users;
+
+
+
+-- Add first_name and last_name to Users table
+ALTER TABLE Users
+ADD COLUMN IF NOT EXISTS first_name TEXT NOT NULL DEFAULT '',
+ADD COLUMN IF NOT EXISTS last_name TEXT NOT NULL DEFAULT '';
+
+-- Drop full_name from JobSeekers and ensure first_name/last_name are not added
+ALTER TABLE JobSeekers
+DROP COLUMN IF EXISTS full_name;
+
+-- Verify Employers table (no changes needed since full_name isn't present)
+SELECT * FROM Employers;
+
+-- Verify updated JobSeekers table
+SELECT * FROM JobSeekers;
+
+ALTER TABLE Jobs ADD COLUMN additional_details TEXT;
+
+
+

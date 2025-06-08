@@ -4,11 +4,14 @@
 #include <QSqlError>
 #include <QMessageBox>
 #include <QDateTime>
+#include <QFileInfo>
+#include <QDesktopServices>
+#include <QUrl>
+#include "core/dbmanager.h"
 
 DashboardAdmin::DashboardAdmin(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DashboardAdmin),
-    dbManager(new DBManager()),
     employerHead(nullptr),
     jobSeekerHead(nullptr)
 {
@@ -24,6 +27,8 @@ DashboardAdmin::DashboardAdmin(QWidget *parent) :
     connect(ui->sortComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &DashboardAdmin::on_sortComboBox_currentIndexChanged);
     connect(ui->logoutButton, &QPushButton::clicked, this, &DashboardAdmin::reject);
+    connect(ui->employerTable, &QTableWidget::cellClicked, this, &DashboardAdmin::on_employerTable_cellClicked);
+    connect(ui->jobSeekerTable, &QTableWidget::cellClicked, this, &DashboardAdmin::on_jobSeekerTable_cellClicked);
 }
 
 DashboardAdmin::~DashboardAdmin()
@@ -38,7 +43,6 @@ DashboardAdmin::~DashboardAdmin()
         jobSeekerHead = jobSeekerHead->next;
         delete temp;
     }
-    delete dbManager;
     delete ui;
 }
 
@@ -62,24 +66,54 @@ void DashboardAdmin::addToLinkedList(UserNode*& head, int userId, const QString&
     }
 }
 
-void DashboardAdmin::sortLinkedList(UserNode*& head, bool ascending, bool byId)
+void DashboardAdmin::mergeSort(UserNode** headRef, bool ascending, bool byId)
 {
+    UserNode* head = *headRef;
     if (!head || !head->next) return;
 
-    UserNode* sorted = nullptr;
-    while (head) {
-        UserNode* current = head;
-        head = head->next;
-        UserNode** link = &sorted;
-        while (*link && ((ascending ?
-                              (byId ? (*link)->userId < current->userId : (*link)->name < current->name) :
-                              (byId ? (*link)->userId > current->userId : (*link)->name > current->name)))) {
-            link = &(*link)->next;
-        }
-        current->next = *link;
-        *link = current;
+    UserNode *left, *right;
+    splitList(head, &left, &right);
+
+    mergeSort(&left, ascending, byId);
+    mergeSort(&right, ascending, byId);
+
+    *headRef = merge(left, right, ascending, byId);
+}
+
+void DashboardAdmin::splitList(UserNode* head, UserNode** left, UserNode** right)
+{
+    UserNode *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
     }
-    head = sorted;
+
+    *left = head;
+    *right = slow->next;
+    slow->next = nullptr;
+}
+
+DashboardAdmin::UserNode* DashboardAdmin::merge(UserNode* left, UserNode* right, bool ascending, bool byId)
+{
+    if (!left) return right;
+    if (!right) return left;
+
+    UserNode* result = nullptr;
+    bool condition;
+    if (byId) {
+        condition = ascending ? (left->userId <= right->userId) : (left->userId >= right->userId);
+    } else {
+        condition = ascending ? (left->name <= right->name) : (left->name >= right->name);
+    }
+
+    if (condition) {
+        result = left;
+        result->next = merge(left->next, right, ascending, byId);
+    } else {
+        result = right;
+        result->next = merge(left, right->next, ascending, byId);
+    }
+    return result;
 }
 
 void DashboardAdmin::displayLinkedList(UserNode* head, QTableWidget* table)
@@ -91,12 +125,16 @@ void DashboardAdmin::displayLinkedList(UserNode* head, QTableWidget* table)
         table->insertRow(row);
         table->setItem(row, 0, new QTableWidgetItem(QString::number(current->userId)));
         table->setItem(row, 1, new QTableWidgetItem(current->name));
-        // Ensure other columns are populated based on table structure
         if (table->columnCount() > 2) {
             table->setItem(row, 2, new QTableWidgetItem(""));
             table->setItem(row, 3, new QTableWidgetItem(""));
             table->setItem(row, 4, new QTableWidgetItem(current->isEmployer ? "N/A" : "No"));
             table->setItem(row, 5, new QTableWidgetItem(""));
+            if (!current->isEmployer) {
+                table->setItem(row, 6, new QTableWidgetItem("")); // Placeholder for resume
+            } else {
+                table->setItem(row, 6, new QTableWidgetItem("")); // Placeholder for uploaded file
+            }
         }
         current = current->next;
     }
@@ -104,7 +142,7 @@ void DashboardAdmin::displayLinkedList(UserNode* head, QTableWidget* table)
 
 void DashboardAdmin::loadSystemStats()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
@@ -128,15 +166,18 @@ void DashboardAdmin::loadSystemStats()
 
 void DashboardAdmin::loadEmployerTable()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT u.user_id, e.employer_id, e.company_name, e.license_number, u.license_verified, u.is_active "
-                  "FROM Users u JOIN Employers e ON u.user_id = e.user_id WHERE u.role = 'employer'");
+    query.prepare("SELECT u.user_id, e.employer_id, e.company_name, e.license_number, u.license_verified, u.is_active, "
+                  "j.description FROM Users u JOIN Employers e ON u.user_id = e.user_id "
+                  "LEFT JOIN Jobs j ON e.employer_id = j.employer_id WHERE u.role = 'employer'");
+    ui->employerTable->setColumnCount(7);
+    ui->employerTable->setHorizontalHeaderLabels({"Employer ID", "Company Name", "License Number", "Verified", "Blocked", "Action", "Uploaded File"});
     ui->employerTable->setRowCount(0);
 
     while (employerHead) {
@@ -151,6 +192,10 @@ void DashboardAdmin::loadEmployerTable()
             int userId = query.value("user_id").toInt();
             QString companyName = query.value("company_name").toString();
             QString licenseVerified = query.value("license_verified").toString();
+            QString uploadedFile = query.value("description").toString().contains("[PNG File Uploaded:") ||
+                                           query.value("description").toString().contains("File Content:")
+                                       ? query.value("description").toString().section("[PNG File Uploaded:", 1).section("]", 0, 0)
+                                       : "No File";
             addToLinkedList(employerHead, userId, companyName, true);
             int row = ui->employerTable->rowCount();
             ui->employerTable->insertRow(row);
@@ -160,6 +205,7 @@ void DashboardAdmin::loadEmployerTable()
             ui->employerTable->setItem(row, 3, new QTableWidgetItem(licenseVerified.isEmpty() ? "No" : licenseVerified));
             ui->employerTable->setItem(row, 4, new QTableWidgetItem(query.value("is_active").toBool() ? "No" : "Yes"));
             ui->employerTable->setItem(row, 5, new QTableWidgetItem(""));
+            ui->employerTable->setItem(row, 6, new QTableWidgetItem(uploadedFile));
         }
     } else {
         QMessageBox::critical(this, "Database Error", "Failed to load employers: " + query.lastError().text());
@@ -168,15 +214,17 @@ void DashboardAdmin::loadEmployerTable()
 
 void DashboardAdmin::loadJobSeekerTable()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT u.user_id, js.seeker_id, js.full_name, js.location, js.phone, u.is_active "
+    query.prepare("SELECT u.user_id, js.seeker_id, u.first_name, u.last_name, js.location, js.phone, u.is_active, js.resume "
                   "FROM Users u JOIN JobSeekers js ON u.user_id = js.user_id WHERE u.role = 'job_seeker'");
+    ui->jobSeekerTable->setColumnCount(7);
+    ui->jobSeekerTable->setHorizontalHeaderLabels({"Seeker ID", "Full Name", "Location", "Phone", "Blocked", "Action", "Resume"});
     ui->jobSeekerTable->setRowCount(0);
 
     while (jobSeekerHead) {
@@ -189,7 +237,8 @@ void DashboardAdmin::loadJobSeekerTable()
     if (query.exec()) {
         while (query.next()) {
             int userId = query.value("user_id").toInt();
-            QString fullName = query.value("full_name").toString();
+            QString fullName = query.value("first_name").toString() + " " + query.value("last_name").toString();
+            QString resume = query.value("resume").toString().isEmpty() ? "No Resume" : query.value("resume").toString();
             addToLinkedList(jobSeekerHead, userId, fullName, false);
             int row = ui->jobSeekerTable->rowCount();
             ui->jobSeekerTable->insertRow(row);
@@ -199,6 +248,7 @@ void DashboardAdmin::loadJobSeekerTable()
             ui->jobSeekerTable->setItem(row, 3, new QTableWidgetItem(query.value("phone").toString()));
             ui->jobSeekerTable->setItem(row, 4, new QTableWidgetItem(query.value("is_active").toBool() ? "No" : "Yes"));
             ui->jobSeekerTable->setItem(row, 5, new QTableWidgetItem(""));
+            ui->jobSeekerTable->setItem(row, 6, new QTableWidgetItem(resume));
         }
     } else {
         QMessageBox::critical(this, "Database Error", "Failed to load job seekers: " + query.lastError().text());
@@ -220,13 +270,12 @@ void DashboardAdmin::on_verifyButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
-    // Map employer_id to user_id
     QSqlQuery userQuery(db);
     userQuery.prepare("SELECT user_id FROM Employers WHERE employer_id = :employer_id");
     userQuery.bindValue(":employer_id", employerId);
@@ -242,7 +291,6 @@ void DashboardAdmin::on_verifyButton_clicked()
 
     int userId = userQuery.value("user_id").toInt();
 
-    // Update license_verified field
     QSqlQuery licenseQuery(db);
     licenseQuery.prepare("UPDATE Users SET license_verified = :license_number WHERE user_id = :user_id AND role = 'employer'");
     licenseQuery.bindValue(":license_number", licenseNumber);
@@ -257,7 +305,6 @@ void DashboardAdmin::on_verifyButton_clicked()
         return;
     }
 
-    // Send notification to the employer
     QSqlQuery notifyQuery(db);
     notifyQuery.prepare("INSERT INTO Notifications (user_id, message, created_at, is_read) "
                         "VALUES (:user_id, :message, :created_at, :is_read)");
@@ -286,13 +333,12 @@ void DashboardAdmin::on_blockButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
-    // Map employer_id to user_id
     QSqlQuery userQuery(db);
     userQuery.prepare("SELECT user_id FROM Employers WHERE employer_id = :employer_id");
     userQuery.bindValue(":employer_id", employerId);
@@ -326,13 +372,12 @@ void DashboardAdmin::on_blockJobSeekerButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
-    // Map seeker_id to user_id
     QSqlQuery userQuery(db);
     userQuery.prepare("SELECT user_id FROM JobSeekers WHERE seeker_id = :seeker_id");
     userQuery.bindValue(":seeker_id", seekerId);
@@ -381,6 +426,7 @@ void DashboardAdmin::on_searchButton_clicked()
             ui->employerTable->setItem(row, 3, new QTableWidgetItem(""));
             ui->employerTable->setItem(row, 4, new QTableWidgetItem(""));
             ui->employerTable->setItem(row, 5, new QTableWidgetItem(""));
+            ui->employerTable->setItem(row, 6, new QTableWidgetItem("")); // Placeholder for uploaded file
         }
         currentEmployer = currentEmployer->next;
     }
@@ -396,6 +442,7 @@ void DashboardAdmin::on_searchButton_clicked()
             ui->jobSeekerTable->setItem(row, 3, new QTableWidgetItem(""));
             ui->jobSeekerTable->setItem(row, 4, new QTableWidgetItem(""));
             ui->jobSeekerTable->setItem(row, 5, new QTableWidgetItem(""));
+            ui->jobSeekerTable->setItem(row, 6, new QTableWidgetItem("")); // Placeholder for resume
         }
         currentJobSeeker = currentJobSeeker->next;
     }
@@ -405,8 +452,35 @@ void DashboardAdmin::on_sortComboBox_currentIndexChanged(int index)
 {
     bool ascending = (index == 0 || index == 2);
     bool byId = (index == 0 || index == 1);
-    sortLinkedList(employerHead, ascending, byId);
-    sortLinkedList(jobSeekerHead, ascending, byId);
+    mergeSort(&employerHead, ascending, byId);
+    mergeSort(&jobSeekerHead, ascending, byId);
     displayLinkedList(employerHead, ui->employerTable);
     displayLinkedList(jobSeekerHead, ui->jobSeekerTable);
+
+}
+
+void DashboardAdmin::on_employerTable_cellClicked(int row, int column)
+{
+    if (column == 6 && ui->employerTable->item(row, 6)->text() != "No File") {
+        QString filePath = ui->employerTable->item(row, 6)->text(); // Assumes file path is stored
+        if (!filePath.isEmpty()) {
+            QUrl url = QUrl::fromLocalFile(filePath);
+            if (!QDesktopServices::openUrl(url)) {
+                QMessageBox::warning(this, "Error", "Could not open the file.");
+            }
+        }
+    }
+}
+
+void DashboardAdmin::on_jobSeekerTable_cellClicked(int row, int column)
+{
+    if (column == 6 && ui->jobSeekerTable->item(row, 6)->text() != "No Resume") {
+        QString filePath = ui->jobSeekerTable->item(row, 6)->text(); // Assumes file path is stored
+        if (!filePath.isEmpty()) {
+            QUrl url = QUrl::fromLocalFile(filePath);
+            if (!QDesktopServices::openUrl(url)) {
+                QMessageBox::warning(this, "Error", "Could not open the resume.");
+            }
+        }
+    }
 }

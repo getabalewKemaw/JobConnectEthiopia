@@ -2,34 +2,34 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include "core/dbmanager.h"
 
-Auth::Auth() : dbManager(new DBManager())
+bool Auth::login(const QString& email, const QString& hashedPassword, QString& role)
 {
-}
-
-bool Auth::login(const QString& email, const QString& password, QString& role)
-{
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
-        qDebug() << "Database is not open:" << db.lastError().text();
+        qDebug() << "Database not open in Auth::login";
         return false;
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT role FROM Users WHERE email = :email AND password = :password AND is_active = TRUE AND blocked = FALSE");
-    query.bindValue(":email", email);
-    query.bindValue(":password", password);
+    // Use single-argument prepare with the query string
+    if (!query.prepare("SELECT role, password FROM Users WHERE email = :email AND is_active = TRUE AND blocked = FALSE")) {
+        qDebug() << "Prepare failed:" << query.lastError().text();
+        return false;
+    }
 
+    query.bindValue(":email", email);
     if (!query.exec()) {
         qDebug() << "Login query failed:" << query.lastError().text();
+        qDebug() << "Query executed:" << query.lastQuery();
         return false;
     }
 
-    if (!query.next()) {
-        qDebug() << "No matching user found or user is blocked.";
-        return false;
+    if (query.next()) {
+        QString storedPassword = query.value("password").toString();
+        role = query.value("role").toString();
+        return (storedPassword == hashedPassword); // Compare hashed passwords
     }
-
-    role = query.value("role").toString();
-    return true;
+    return false;
 }

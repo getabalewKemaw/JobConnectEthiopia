@@ -57,3 +57,4 @@ FORMS += \
     gui/dashboard_admin.ui \
     gui/job_post_form.ui \
     gui/signup.ui
+    RESOURCES += resources.qrc

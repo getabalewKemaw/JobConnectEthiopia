@@ -1,17 +1,18 @@
 #include "ui_dashboard_employer.h"
-#include "ui/dashboard_employer.h"
+#include "dashboard_employer.h"
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QMessageBox>
 #include <QDate>
-#include <QStack>
 #include <QInputDialog>
 #include <QDebug>
+#include <QFileDialog>
+#include <QTextStream>
+#include <QStringList>
 
 DashboardEmployer::DashboardEmployer(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DashboardEmployer),
-    dbManager(new DBManager()),
     employerUserId(0),
     jobHead(nullptr),
     applicantHead(nullptr)
@@ -27,6 +28,14 @@ DashboardEmployer::DashboardEmployer(QWidget *parent) :
             this, &DashboardEmployer::on_sortApplicantComboBox_currentIndexChanged);
     connect(ui->logoutButton, &QPushButton::clicked, this, &DashboardEmployer::reject);
     connect(ui->applicantsTable, &QTableWidget::cellClicked, this, &DashboardEmployer::on_applicantsTable_cellClicked);
+    connect(ui->searchApplicantLineEdit, &QLineEdit::textChanged, this, &DashboardEmployer::on_searchApplicantLineEdit_textChanged);
+    connect(ui->fileUploadButton, &QPushButton::clicked, this, [this]() {
+        QString filePath = QFileDialog::getOpenFileName(this, tr("Upload Job Description File"), "", tr("Files (*.pdf *.txt *.png)"));
+        if (!filePath.isEmpty()) {
+            ui->fileUploadButton->setProperty("filePath", filePath);
+            ui->fileUploadButton->setText(QFileInfo(filePath).fileName());
+        }
+    });
 }
 
 DashboardEmployer::~DashboardEmployer()
@@ -41,7 +50,6 @@ DashboardEmployer::~DashboardEmployer()
         applicantHead = applicantHead->next;
         delete temp;
     }
-    delete dbManager;
     delete ui;
 }
 
@@ -50,14 +58,13 @@ void DashboardEmployer::setEmployerUserId(int userId)
     employerUserId = userId;
     loadApplicantsTable();
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         ui->licenseStatusLabel->setText("License Verification Status: Database connection failed");
         QMessageBox::critical(this, "Database Error", "Failed to connect to database: " + db.lastError().text());
         return;
     }
 
-    // Map employer_id to user_id
     QSqlQuery userQuery(db);
     userQuery.prepare("SELECT user_id FROM Employers WHERE employer_id = :employer_id");
     userQuery.bindValue(":employer_id", employerUserId);
@@ -75,9 +82,8 @@ void DashboardEmployer::setEmployerUserId(int userId)
 
     int actualUserId = userQuery.value("user_id").toInt();
 
-    // Fetch license_verified using the correct user_id
     QSqlQuery licenseQuery(db);
-    licenseQuery.prepare("SELECT license_verified FROM Users WHERE user_id = :user_id AND role = 'employer'");
+    licenseQuery.prepare("SELECT license_verified FROM Users WHERE user_id = :user_id");
     licenseQuery.bindValue(":user_id", actualUserId);
     if (!licenseQuery.exec()) {
         ui->licenseStatusLabel->setText("License Verification Status: Error loading status");
@@ -86,8 +92,8 @@ void DashboardEmployer::setEmployerUserId(int userId)
     }
 
     if (!licenseQuery.next()) {
-        ui->licenseStatusLabel->setText("License Verification Status: Employer not found in Users table");
-        QMessageBox::warning(this, "Data Error", QString("No employer found with user_id %1 in Users table").arg(actualUserId));
+        ui->licenseStatusLabel->setText("License Verification Status: User not found in Users table");
+        QMessageBox::warning(this, "Data Error", QString("No user found with user_id %1 in Users table").arg(actualUserId));
         return;
     }
 
@@ -98,7 +104,6 @@ void DashboardEmployer::setEmployerUserId(int userId)
         ui->licenseStatusLabel->setText("License Verification Status: Not Verified");
     }
 
-    // Check for unread notifications about license updates
     QSqlQuery notifyQuery(db);
     notifyQuery.prepare("SELECT message FROM Notifications WHERE user_id = :user_id AND is_read = FALSE");
     notifyQuery.bindValue(":user_id", actualUserId);
@@ -107,7 +112,6 @@ void DashboardEmployer::setEmployerUserId(int userId)
             QString message = notifyQuery.value("message").toString();
             if (message.contains("license verification number")) {
                 QMessageBox::information(this, "Notification", message);
-                // Mark the notification as read
                 QSqlQuery updateNotify(db);
                 updateNotify.prepare("UPDATE Notifications SET is_read = TRUE WHERE user_id = :user_id AND message = :message");
                 updateNotify.bindValue(":user_id", actualUserId);
@@ -115,6 +119,19 @@ void DashboardEmployer::setEmployerUserId(int userId)
                 updateNotify.exec();
             }
         }
+    }
+}
+
+void DashboardEmployer::setLoggedInUser(const QString& fullName)
+{
+    loggedInUser = fullName;
+    updateWelcomeLabel();
+}
+
+void DashboardEmployer::updateWelcomeLabel()
+{
+    if (!loggedInUser.isEmpty()) {
+        ui->titleLabel->setText(QString("Employer Dashboard - Welcome %1").arg(loggedInUser));
     }
 }
 
@@ -138,29 +155,55 @@ void DashboardEmployer::addToApplicantStack(Applicant* applicant)
     applicantHead = applicant;
 }
 
+void DashboardEmployer::mergeSort(Applicant** headRef, bool ascending, bool byId)
+{
+    Applicant* head = *headRef;
+    if (!head || !head->next) return;
+
+    Applicant *left, *right;
+    splitList(head, &left, &right);
+
+    mergeSort(&left, ascending, byId);
+    mergeSort(&right, ascending, byId);
+
+    *headRef = merge(left, right, ascending, byId);
+}
+
+void DashboardEmployer::splitList(Applicant* head, Applicant** left, Applicant** right)
+{
+    Applicant *slow = head, *fast = head->next;
+    while (fast && fast->next) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    *left = head;
+    *right = slow->next;
+    slow->next = nullptr;
+}
+
+Applicant* DashboardEmployer::merge(Applicant* left, Applicant* right, bool ascending, bool byId)
+{
+    if (!left) return right;
+    if (!right) return left;
+
+    Applicant* result = nullptr;
+    if ((ascending && byId && left->seekerId <= right->seekerId) ||
+        (ascending && !byId && left->fullName <= right->fullName) ||
+        (!ascending && byId && left->seekerId >= right->seekerId) ||
+        (!ascending && !byId && left->fullName >= right->fullName)) {
+        result = left;
+        result->next = merge(left->next, right, ascending, byId);
+    } else {
+        result = right;
+        result->next = merge(left, right->next, ascending, byId);
+    }
+    return result;
+}
+
 void DashboardEmployer::sortApplicantStack(bool ascending, bool byId)
 {
-    if (!applicantHead || !applicantHead->next) return;
-
-    QStack<Applicant*> stack;
-    Applicant* current = applicantHead;
-    while (current) {
-        stack.push(current);
-        current = current->next;
-    }
-
-    applicantHead = nullptr;
-    while (!stack.isEmpty()) {
-        Applicant* temp = stack.pop();
-        Applicant** link = &applicantHead;
-        while (*link && ((ascending ?
-                              (byId ? (*link)->seekerId < temp->seekerId : (*link)->fullName < temp->fullName) :
-                              (byId ? (*link)->seekerId > temp->seekerId : (*link)->fullName > temp->fullName)))) {
-            link = &(*link)->next;
-        }
-        temp->next = *link;
-        *link = temp;
-    }
+    mergeSort(&applicantHead, ascending, byId);
 }
 
 void DashboardEmployer::displayApplicantStack(QTableWidget* table)
@@ -181,17 +224,18 @@ void DashboardEmployer::displayApplicantStack(QTableWidget* table)
 
 void DashboardEmployer::loadApplicantsTable()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
     }
 
     QSqlQuery query(db);
-    query.prepare("SELECT a.application_id, a.job_id, a.seeker_id, js.full_name, a.status, a.application_details "
+    query.prepare("SELECT a.application_id, a.job_id, a.seeker_id, u.first_name, u.last_name, a.status, a.application_details "
                   "FROM Applications a "
                   "JOIN Jobs j ON a.job_id = j.job_id "
                   "JOIN JobSeekers js ON a.seeker_id = js.seeker_id "
+                  "JOIN Users u ON js.user_id = u.user_id "
                   "WHERE j.employer_id = :employer_id");
     query.bindValue(":employer_id", employerUserId);
     ui->applicantsTable->setRowCount(0);
@@ -208,7 +252,9 @@ void DashboardEmployer::loadApplicantsTable()
             int applicationId = query.value("application_id").toInt();
             int jobId = query.value("job_id").toInt();
             int seekerId = query.value("seeker_id").toInt();
-            QString fullName = query.value("full_name").toString();
+            QString firstName = query.value("first_name").toString();
+            QString lastName = query.value("last_name").toString();
+            QString fullName = firstName + " " + lastName;
             QString status = query.value("status").toString();
             QString applicationDetails = query.value("application_details").toString();
             Applicant* newApplicant = new Applicant{applicationId, jobId, seekerId, fullName, status, applicationDetails, nullptr};
@@ -216,7 +262,8 @@ void DashboardEmployer::loadApplicantsTable()
         }
         displayApplicantStack(ui->applicantsTable);
     } else {
-        QMessageBox::critical(this, "Database Error", "Failed to load applicants: " + query.lastError().text());
+        QMessageBox::critical(this, "Database Error", "Failed to load applicants: " + query.lastError().text() +
+                                                          "\nEnsure Applications, Jobs, JobSeekers, and Users tables exist with the specified columns.");
     }
 }
 
@@ -233,6 +280,7 @@ void DashboardEmployer::on_postJobButton_clicked()
     QString workMode = ui->workModeComboBox->currentText();
     QString industry = ui->industryLineEdit->text().trimmed();
     QString skills = ui->skillsTextEdit->toPlainText().trimmed();
+    QString filePath = ui->fileUploadButton->property("filePath").toString();
 
     if (title.isEmpty() || description.isEmpty() || !ok || salaryRange.isEmpty() || deadlineStr.isEmpty() ||
         location.isEmpty() || jobType.isEmpty() || workMode.isEmpty() || industry.isEmpty() || skills.isEmpty()) {
@@ -254,13 +302,12 @@ void DashboardEmployer::on_postJobButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed.");
         return;
     }
 
-    // Map employer_id to user_id for license verification
     QSqlQuery userQuery(db);
     userQuery.prepare("SELECT user_id FROM Employers WHERE employer_id = :employer_id");
     userQuery.bindValue(":employer_id", employerUserId);
@@ -271,7 +318,7 @@ void DashboardEmployer::on_postJobButton_clicked()
     int actualUserId = userQuery.value("user_id").toInt();
 
     QSqlQuery licenseQuery(db);
-    licenseQuery.prepare("SELECT license_verified FROM Users WHERE user_id = :user_id AND role = 'employer'");
+    licenseQuery.prepare("SELECT license_verified FROM Users WHERE user_id = :user_id");
     licenseQuery.bindValue(":user_id", actualUserId);
     if (!licenseQuery.exec()) {
         QMessageBox::critical(this, "Database Error", "Failed to verify license: " + licenseQuery.lastError().text());
@@ -282,18 +329,34 @@ void DashboardEmployer::on_postJobButton_clicked()
     if (licenseQuery.next()) {
         expectedLicense = licenseQuery.value("license_verified").toString();
     } else {
-        QMessageBox::critical(this, "Database Error", "Employer not found in Users table.");
+        QMessageBox::critical(this, "Database Error", "User not found in Users table.");
         return;
     }
 
-    if (expectedLicense != licenseNumber) {
-        QMessageBox::warning(this, "License Error", "Invalid license verification number.");
+    if (expectedLicense.isEmpty() || expectedLicense != licenseNumber) {
+        QMessageBox::warning(this, "License Error", "Invalid or missing license verification number.");
         return;
+    }
+
+    if (!filePath.isEmpty()) {
+        if (filePath.endsWith(".png")) {
+            description += "\n\n[PNG File Uploaded: Cannot display image in text. Contact employer for details.]";
+        } else {
+            QFile file(filePath);
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream in(&file);
+                description += "\n\nFile Content:\n" + in.readAll();
+                file.close();
+            } else {
+                QMessageBox::warning(this, "File Error", "Could not read the uploaded file.");
+                return;
+            }
+        }
     }
 
     QSqlQuery insertQuery(db);
-    insertQuery.prepare("INSERT INTO Jobs (employer_id, title, description, experience_required, salary_range, deadline, location, job_type, work_mode, industry, skills_required, is_active) "
-                        "VALUES (:employer_id, :title, :description, :experience_required, :salary_range, :deadline, :location, :job_type, :work_mode, :industry, :skills_required, TRUE)");
+    insertQuery.prepare("INSERT INTO Jobs (employer_id, title, description, experience_required, salary_range, deadline, location, job_type, work_mode, industry, is_active) "
+                        "VALUES (:employer_id, :title, :description, :experience_required, :salary_range, :deadline, :location, :job_type, :work_mode, :industry, TRUE)");
     insertQuery.bindValue(":employer_id", employerUserId);
     insertQuery.bindValue(":title", title);
     insertQuery.bindValue(":description", description);
@@ -304,8 +367,6 @@ void DashboardEmployer::on_postJobButton_clicked()
     insertQuery.bindValue(":job_type", jobType);
     insertQuery.bindValue(":work_mode", workMode);
     insertQuery.bindValue(":industry", industry);
-    insertQuery.bindValue(":skills_required", skills);
-
     if (!insertQuery.exec()) {
         QMessageBox::critical(this, "Database Error", "Failed to post job: " + insertQuery.lastError().text() +
                                                           "\nEnsure all columns exist in the Jobs table.");
@@ -313,6 +374,40 @@ void DashboardEmployer::on_postJobButton_clicked()
     }
 
     int jobId = insertQuery.lastInsertId().toInt();
+
+    // Parse and insert skills into JobSkills
+    QSqlQuery query(db); // Declare query here
+    QStringList skillList = skills.split(",", Qt::SkipEmptyParts);
+    foreach (const QString& skill, skillList) {
+        QString trimmedSkill = skill.trimmed();
+        int skillId = -1;
+        QSqlQuery skillQuery(db);
+        skillQuery.prepare("SELECT skill_id FROM Skills WHERE skill_name = :skill_name");
+        skillQuery.bindValue(":skill_name", trimmedSkill);
+        if (skillQuery.exec() && skillQuery.next()) {
+            skillId = skillQuery.value("skill_id").toInt();
+        } else {
+            QSqlQuery insertSkillQuery(db);
+            insertSkillQuery.prepare("INSERT INTO Skills (skill_name) VALUES (:skill_name)");
+            insertSkillQuery.bindValue(":skill_name", trimmedSkill);
+            if (!insertSkillQuery.exec()) {
+                QMessageBox::critical(this, "Database Error", "Failed to insert new skill: " + insertSkillQuery.lastError().text());
+                query.exec("ROLLBACK");
+                return;
+            }
+            skillId = insertSkillQuery.lastInsertId().toInt();
+        }
+        QSqlQuery jobSkillQuery(db);
+        jobSkillQuery.prepare("INSERT INTO JobSkills (job_id, skill_id) VALUES (:job_id, :skill_id)");
+        jobSkillQuery.bindValue(":job_id", jobId);
+        jobSkillQuery.bindValue(":skill_id", skillId);
+        if (!jobSkillQuery.exec()) {
+            QMessageBox::critical(this, "Database Error", "Failed to link skill to job: " + jobSkillQuery.lastError().text());
+            query.exec("ROLLBACK");
+            return;
+        }
+    }
+
     addJobNode(jobId, title, description, experienceRequired, salaryRange, deadlineStr);
     QMessageBox::information(this, "Success", "Job posted successfully!");
     ui->jobTitleLineEdit->clear();
@@ -325,6 +420,8 @@ void DashboardEmployer::on_postJobButton_clicked()
     ui->workModeComboBox->setCurrentIndex(0);
     ui->industryLineEdit->clear();
     ui->skillsTextEdit->clear();
+    ui->fileUploadButton->setProperty("filePath", "");
+    ui->fileUploadButton->setText("Upload File");
 }
 
 void DashboardEmployer::on_shortlistButton_clicked()
@@ -337,7 +434,7 @@ void DashboardEmployer::on_shortlistButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
@@ -406,18 +503,15 @@ void DashboardEmployer::on_shortlistButton_clicked()
     loadApplicantsTable();
 }
 
-void DashboardEmployer::on_searchApplicantButton_clicked()
+void DashboardEmployer::on_searchApplicantLineEdit_textChanged(const QString& text)
 {
-    QString searchTerm = ui->searchApplicantLineEdit->text().trimmed().toLower();
-    if (searchTerm.isEmpty()) {
-        loadApplicantsTable();
-        return;
-    }
-
+    QString searchTerm = text.trimmed().toLower();
     ui->applicantsTable->setRowCount(0);
     Applicant* current = applicantHead;
+
     while (current) {
-        if (QString::number(current->seekerId).contains(searchTerm) ||
+        if (searchTerm.isEmpty() ||
+            QString::number(current->seekerId).contains(searchTerm) ||
             current->fullName.toLower().contains(searchTerm)) {
             int row = ui->applicantsTable->rowCount();
             ui->applicantsTable->insertRow(row);
@@ -429,6 +523,11 @@ void DashboardEmployer::on_searchApplicantButton_clicked()
         }
         current = current->next;
     }
+}
+
+void DashboardEmployer::on_searchApplicantButton_clicked()
+{
+    // No need for separate search button action; handled by textChanged
 }
 
 void DashboardEmployer::on_sortApplicantComboBox_currentIndexChanged(int index)
@@ -444,7 +543,7 @@ void DashboardEmployer::on_applicantsTable_cellClicked(int row, int column)
     if (column == 4 && ui->applicantsTable->item(row, 4)->text() == "View Details") {
         int seekerId = ui->applicantsTable->item(row, 1)->text().toInt();
         int jobId = ui->applicantsTable->item(row, 0)->text().toInt();
-        QSqlDatabase db = dbManager->getDatabase();
+        QSqlDatabase db = DBManager::getInstance().getDatabase();
         if (!db.isOpen()) {
             QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
             return;

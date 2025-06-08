@@ -5,7 +5,8 @@
 
 DBManager::DBManager()
 {
-    db = QSqlDatabase::addDatabase("QPSQL");
+    // Use a unique connection name to avoid overwriting the default
+    db = QSqlDatabase::addDatabase("QPSQL", "JobappConnection");
     db.setHostName("localhost");
     db.setPort(5432);
     db.setDatabaseName("Jobapp");
@@ -23,7 +24,14 @@ DBManager::~DBManager()
 {
     if (db.isOpen()) {
         db.close();
+        QSqlDatabase::removeDatabase("JobappConnection"); // Remove the specific connection
     }
+}
+
+DBManager& DBManager::getInstance()
+{
+    static DBManager instance; // Thread-safe singleton in C++11
+    return instance;
 }
 
 QSqlDatabase DBManager::getDatabase()

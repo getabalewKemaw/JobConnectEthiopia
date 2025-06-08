@@ -78,7 +78,7 @@
         font: bold 24px "Arial";
         color: #2D6A4F; /* Rich green for title */
         background-color: #D1E8E2; /* Soft green background */
-        border-radius: 5px;
+        border-radius: 7px;
         padding: 10px;
        </string>
       </property>
@@ -195,7 +195,7 @@
     <item>
      <widget class="QTabWidget" name="userTabs">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="employersTab">
        <attribute name="title">
@@ -205,11 +205,11 @@
         <item>
          <widget class="QTableWidget" name="employerTable">
           <property name="columnCount">
-           <number>6</number>
+           <number>7</number>
           </property>
           <column>
            <property name="text">
-            <string>User ID</string>
+            <string>Employer ID</string>
            </property>
           </column>
           <column>
@@ -235,6 +235,11 @@
           <column>
            <property name="text">
             <string>Action</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Uploaded File</string>
            </property>
           </column>
          </widget>
@@ -288,11 +293,11 @@
         <item>
          <widget class="QTableWidget" name="jobSeekerTable">
           <property name="columnCount">
-           <number>6</number>
+           <number>7</number>
           </property>
           <column>
            <property name="text">
-            <string>User ID</string>
+            <string>Seeker ID</string>
            </property>
           </column>
           <column>
@@ -318,6 +323,11 @@
           <column>
            <property name="text">
             <string>Action</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Resume</string>
            </property>
           </column>
          </widget>

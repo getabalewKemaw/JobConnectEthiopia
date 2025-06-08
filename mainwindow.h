@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "ui/login.h"
+#include "ui/signup.h"
 #include "ui/dashboard_seeker.h"
 #include "ui/dashboard_employer.h"
 #include "ui/dashboard_admin.h"
@@ -21,10 +22,12 @@ public:
 
 private slots:
     void handleLogin();
+    void showLoginDialog();
+    void showSignUpDialog();
 
 private:
     Ui::MainWindow *ui;
-    Login *loginDialog;
-    QDialog *dashboard; // Generic pointer to hold different dashboard types
+    QDialog *dashboard;
 };
+
 #endif // MAINWINDOW_H

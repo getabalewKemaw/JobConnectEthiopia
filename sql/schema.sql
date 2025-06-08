@@ -214,3 +214,6 @@ SELECT * FROM Employers;
 SELECT * FROM JobSeekers;
 
 ALTER TABLE Jobs ADD COLUMN additional_details TEXT;
+
+
+

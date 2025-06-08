@@ -2,15 +2,10 @@
 #define AUTH_H
 
 #include <QString>
-#include "dbmanager.h"
 
 class Auth {
 public:
-    Auth();
-    bool login(const QString& email, const QString& password, QString& role);
-
-private:
-    DBManager* dbManager;
+    bool login(const QString& email, const QString& hashedPassword, QString& role);
 };
 
 #endif // AUTH_H

@@ -3,11 +3,16 @@
 #include <QMessageBox>
 #include "core/auth.h"
 #include <QCryptographicHash>
+#include "core/dbmanager.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 Login::Login(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Login),
-    dbManager(new DBManager())
+    userRole(""),
+    userEmail("")
 {
     ui->setupUi(this);
     connect(ui->loginButton, &QPushButton::clicked, this, &Login::on_loginButton_clicked);
@@ -17,7 +22,6 @@ Login::Login(QWidget *parent) :
 
 Login::~Login()
 {
-    delete dbManager;
     delete ui;
 }
 
@@ -41,24 +45,51 @@ void Login::on_loginButton_clicked()
         return;
     }
 
-    // Hash the password using SHA-256 to match the signup process
     QString hashedPassword = QString(QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Sha256).toHex());
 
-    Auth auth;
-    if (!auth.login(email, hashedPassword, userRole)) {
-        ui->statusLabel->setText("Invalid email or password, or account is blocked.");
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
+    if (!db.isOpen()) {
+        ui->statusLabel->setText("Database connection failed.");
+        qDebug() << "Database not open:" << db.lastError().text();
         return;
     }
 
-    userEmail = email;
-    clearFields();
-    emit accepted();
+    QSqlQuery query(db);
+    // Use single-argument prepare with the query string
+    if (!query.prepare("SELECT role, password FROM Users WHERE email = :email AND is_active = TRUE AND blocked = FALSE")) {
+        ui->statusLabel->setText("Query preparation failed.");
+        qDebug() << "Prepare failed:" << query.lastError().text();
+        return;
+    }
+
+    query.bindValue(":email", email);
+    if (!query.exec()) {
+        ui->statusLabel->setText("Login query failed.");
+        qDebug() << "Login query failed:" << query.lastError().text();
+        qDebug() << "Query executed:" << query.lastQuery();
+        return;
+    }
+
+    if (query.next()) {
+        QString storedPassword = query.value("password").toString();
+        userRole = query.value("role").toString();
+        if (storedPassword == hashedPassword) {
+            userEmail = email;
+            clearFields();
+            emit accepted();
+            ui->statusLabel->setText("Login successful!");
+        } else {
+            ui->statusLabel->setText("Invalid email or password, or account is blocked.");
+        }
+    } else {
+        ui->statusLabel->setText("Invalid email or password, or account is blocked.");
+    }
 }
 
 void Login::on_backButton_clicked()
 {
-    emit showSignUp(); // Emit signal to show SignUp dialog
-    reject(); // Close the login dialog
+    emit showSignUp();
+    reject();
 }
 
 void Login::clearFields()

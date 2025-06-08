@@ -2,7 +2,6 @@
 #define LOGIN_H
 
 #include <QDialog>
-#include "core/dbmanager.h"
 
 namespace Ui {
 class Login;
@@ -19,18 +18,17 @@ public:
     QString getEmail() const;
 
 signals:
-    void showSignUp(); // Signal to show SignUp dialog
+    void showSignUp();
 
 private slots:
     void on_loginButton_clicked();
     void on_backButton_clicked();
 
 private:
+    void clearFields();
     Ui::Login *ui;
-    DBManager *dbManager;
     QString userRole;
     QString userEmail;
-    void clearFields();
 };
 
 #endif // LOGIN_H

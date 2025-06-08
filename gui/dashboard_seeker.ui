@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>800</height>
+    <height>900</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,19 +37,27 @@
      <x>20</x>
      <y>20</y>
      <width>760</width>
-     <height>760</height>
+     <height>860</height>
     </rect>
+   </property>
+   <property name="verticalScrollBarPolicy">
+    <enum>Qt::ScrollBarPolicy::ScrollBarAsNeeded</enum>
+   </property>
+   <property name="horizontalScrollBarPolicy">
+    <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
    </property>
    <property name="widgetResizable">
     <bool>true</bool>
    </property>
-   <property name="horizontalScrollBarPolicy">
-    <enum>Qt::ScrollBarAlwaysOff</enum>
-   </property>
-   <property name="verticalScrollBarPolicy">
-    <enum>Qt::ScrollBarAsNeeded</enum>
-   </property>
    <widget class="QWidget" name="scrollAreaWidgetContents">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>741</width>
+      <height>1077</height>
+     </rect>
+    </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <property name="spacing">
       <number>10</number>
@@ -243,7 +251,47 @@
          </property>
         </widget>
        </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="resumeLabel">
+         <property name="text">
+          <string>Resume:</string>
+         </property>
+        </widget>
+       </item>
        <item row="6" column="1">
+        <widget class="QLineEdit" name="resumeLineEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Upload Resume (e.g., resume.pdf)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="aboutLabel">
+         <property name="text">
+          <string>About:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QTextEdit" name="aboutTextEdit">
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>60</height>
+          </size>
+         </property>
+         <property name="placeholderText">
+          <string>Enter About (e.g., Passionate about tech and innovation)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
         <widget class="QPushButton" name="updateProfileButton">
          <property name="text">
           <string>Update Profile</string>
@@ -331,11 +379,11 @@
        <property name="minimumSize">
         <size>
          <width>0</width>
-         <height>100</height>
+         <height>150</height>
         </size>
        </property>
        <property name="columnCount">
-        <number>7</number>
+        <number>12</number>
        </property>
        <column>
         <property name="text">
@@ -365,6 +413,31 @@
        <column>
         <property name="text">
          <string>Deadline</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Job Type</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Work Mode</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Industry</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Skills Required</string>
+        </property>
+       </column>
+       <column>
+        <property name="text">
+         <string>Additional Details</string>
         </property>
        </column>
        <column>

@@ -3,18 +3,16 @@
 #include <QMessageBox>
 #include <QSqlQuery>
 #include <QSqlError>
-#include<core/dbmanager.h>
+#include "core/dbmanager.h"
 #include <QRegularExpression>
 #include <QCryptographicHash>
 
 SignUp::SignUp(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::SignUp),
-    dbManager(new DBManager())
+    ui(new Ui::SignUp)
 {
     ui->setupUi(this);
     setupConnections();
-    // Initially hide Employer-specific fields
     ui->companyNameLabel->setVisible(false);
     ui->companyNameLineEdit->setVisible(false);
     ui->licenseNumberLabel->setVisible(false);
@@ -27,7 +25,6 @@ SignUp::SignUp(QWidget *parent) :
 
 SignUp::~SignUp()
 {
-    delete dbManager;
     delete ui;
 }
 
@@ -55,7 +52,7 @@ void SignUp::on_roleComboBox_currentIndexChanged(int index)
 
 bool SignUp::ensureDatabaseConnection()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase(); // Fixed to use singleton
     if (!db.isValid()) {
         QMessageBox::critical(this, "Database Error", "Invalid database connection.");
         return false;
@@ -90,7 +87,7 @@ bool SignUp::validateInputs()
     }
 
     // Check for duplicate email
-    QSqlQuery query(dbManager->getDatabase());
+    QSqlQuery query(DBManager::getInstance().getDatabase()); // Fixed to use singleton
     query.prepare("SELECT COUNT(*) FROM Users WHERE email = :email");
     query.bindValue(":email", email);
     if (!query.exec()) {
@@ -189,7 +186,7 @@ void SignUp::on_submitButton_clicked()
         return;
     }
 
-    QSqlQuery query(dbManager->getDatabase());
+    QSqlQuery query(DBManager::getInstance().getDatabase()); // Fixed to use singleton
     query.exec("BEGIN TRANSACTION");
 
     QString email = ui->emailLineEdit->text().trimmed();

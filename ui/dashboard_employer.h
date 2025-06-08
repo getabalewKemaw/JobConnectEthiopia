@@ -4,7 +4,7 @@
 #include <QDialog>
 #include <QTableWidget>
 #include <QString>
-#include "core/dbmanager.h"
+#include "core/dbmanager.h" // For DBManager singleton
 #include "core/job_node.h" // Include JobNode definition from here
 
 namespace Ui {
@@ -41,7 +41,7 @@ private slots:
 
 private:
     Ui::DashboardEmployer *ui;
-    DBManager* dbManager;
+    // Removed dbManager pointer, use DBManager::getInstance() instead
     int employerUserId;
     JobNode* jobHead; // Use the existing JobNode from job_node.h
     Applicant* applicantHead;

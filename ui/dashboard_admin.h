@@ -33,6 +33,8 @@ private slots:
     void on_blockJobSeekerButton_clicked();
     void on_searchButton_clicked();
     void on_sortComboBox_currentIndexChanged(int index);
+    void on_employerTable_cellClicked(int row, int column); // Added
+    void on_jobSeekerTable_cellClicked(int row, int column); // Added
 
 private:
     Ui::DashboardAdmin *ui;

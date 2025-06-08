@@ -11,6 +11,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QMessageBox>
+#include "core/dbmanager.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -72,8 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
                   "   background-color: white; "
                   "   border: 1px solid #e5e7eb; "
                   "   border-radius: 8px; "
-                  "}"
-                  );
+                  "}");
 }
 
 MainWindow::~MainWindow()
@@ -85,7 +85,7 @@ void MainWindow::showLoginDialog()
 {
     Login *loginDialog = new Login(this);
     connect(loginDialog, &Login::showSignUp, this, [this, loginDialog]() {
-        loginDialog->deleteLater(); // Destroy login dialog
+        loginDialog->deleteLater();
         showSignUpDialog();
     });
     connect(loginDialog, &QDialog::accepted, this, &MainWindow::handleLogin);
@@ -97,12 +97,12 @@ void MainWindow::showLoginDialog()
 void MainWindow::showSignUpDialog()
 {
     SignUp *signUpDialog = new SignUp(this);
-    connect(signUpDialog, &SignUp::userSignedUp, this, [](const QString& firstName, const QString& lastName) {
-        QString welcomeMessage = QString("Welcome, %1 %2!").arg(firstName).arg(lastName);
-        QMessageBox::information(nullptr, "Welcome", welcomeMessage);
+    connect(signUpDialog, &SignUp::userSignedUp, this, [this](const QString& firstName, const QString& lastName, const QString& role) {
+        QString welcomeMessage = QString("Welcome, %1 %2! (Role: %3)").arg(firstName).arg(lastName).arg(role);
+        QMessageBox::information(this, "Welcome", welcomeMessage);
     });
     connect(signUpDialog, &SignUp::showLogin, this, [this, signUpDialog]() {
-        signUpDialog->deleteLater(); // Destroy signup dialog
+        signUpDialog->deleteLater();
         showLoginDialog();
     });
     connect(signUpDialog, &QDialog::accepted, signUpDialog, &QDialog::deleteLater);
@@ -123,9 +123,7 @@ void MainWindow::handleLogin()
     int userId = 0;
     QString fullName;
 
-    // Initialize DBManager for database access
-    DBManager dbManager;
-    QSqlDatabase db = dbManager.getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
@@ -194,6 +192,17 @@ void MainWindow::handleLogin()
     if (role == "job_seeker") {
         dashboard = new DashboardSeeker(this);
         static_cast<DashboardSeeker*>(dashboard)->setSeekerUserId(dashboardId);
+        // Load additional JobSeeker fields
+        QSqlQuery seekerDetails(db);
+        seekerDetails.prepare("SELECT skills, education, work_experience, resume, about FROM JobSeekers WHERE seeker_id = :seeker_id");
+        seekerDetails.bindValue(":seeker_id", dashboardId);
+        if (seekerDetails.exec() && seekerDetails.next()) {
+            static_cast<DashboardSeeker*>(dashboard)->setSeekerDetails(
+                seekerDetails.value("skills").toString(),
+                seekerDetails.value("education").toString(),
+                seekerDetails.value("work_experience").toString()
+                );
+        }
     } else if (role == "employer") {
         dashboard = new DashboardEmployer(this);
         static_cast<DashboardEmployer*>(dashboard)->setEmployerUserId(dashboardId);

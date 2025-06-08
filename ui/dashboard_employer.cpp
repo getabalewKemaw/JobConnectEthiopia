@@ -8,11 +8,11 @@
 #include <QDebug>
 #include <QFileDialog>
 #include <QTextStream>
+#include <QStringList>
 
 DashboardEmployer::DashboardEmployer(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DashboardEmployer),
-    dbManager(new DBManager()),
     employerUserId(0),
     jobHead(nullptr),
     applicantHead(nullptr)
@@ -50,7 +50,6 @@ DashboardEmployer::~DashboardEmployer()
         applicantHead = applicantHead->next;
         delete temp;
     }
-    delete dbManager;
     delete ui;
 }
 
@@ -59,7 +58,7 @@ void DashboardEmployer::setEmployerUserId(int userId)
     employerUserId = userId;
     loadApplicantsTable();
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         ui->licenseStatusLabel->setText("License Verification Status: Database connection failed");
         QMessageBox::critical(this, "Database Error", "Failed to connect to database: " + db.lastError().text());
@@ -225,7 +224,7 @@ void DashboardEmployer::displayApplicantStack(QTableWidget* table)
 
 void DashboardEmployer::loadApplicantsTable()
 {
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
@@ -303,7 +302,7 @@ void DashboardEmployer::on_postJobButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed.");
         return;
@@ -356,8 +355,8 @@ void DashboardEmployer::on_postJobButton_clicked()
     }
 
     QSqlQuery insertQuery(db);
-    insertQuery.prepare("INSERT INTO Jobs (employer_id, title, description, experience_required, salary_range, deadline, location, job_type, work_mode, industry, skills_required, is_active) "
-                        "VALUES (:employer_id, :title, :description, :experience_required, :salary_range, :deadline, :location, :job_type, :work_mode, :industry, :skills_required, TRUE)");
+    insertQuery.prepare("INSERT INTO Jobs (employer_id, title, description, experience_required, salary_range, deadline, location, job_type, work_mode, industry, is_active) "
+                        "VALUES (:employer_id, :title, :description, :experience_required, :salary_range, :deadline, :location, :job_type, :work_mode, :industry, TRUE)");
     insertQuery.bindValue(":employer_id", employerUserId);
     insertQuery.bindValue(":title", title);
     insertQuery.bindValue(":description", description);
@@ -368,8 +367,6 @@ void DashboardEmployer::on_postJobButton_clicked()
     insertQuery.bindValue(":job_type", jobType);
     insertQuery.bindValue(":work_mode", workMode);
     insertQuery.bindValue(":industry", industry);
-    insertQuery.bindValue(":skills_required", skills);
-
     if (!insertQuery.exec()) {
         QMessageBox::critical(this, "Database Error", "Failed to post job: " + insertQuery.lastError().text() +
                                                           "\nEnsure all columns exist in the Jobs table.");
@@ -377,6 +374,40 @@ void DashboardEmployer::on_postJobButton_clicked()
     }
 
     int jobId = insertQuery.lastInsertId().toInt();
+
+    // Parse and insert skills into JobSkills
+    QSqlQuery query(db); // Declare query here
+    QStringList skillList = skills.split(",", Qt::SkipEmptyParts);
+    foreach (const QString& skill, skillList) {
+        QString trimmedSkill = skill.trimmed();
+        int skillId = -1;
+        QSqlQuery skillQuery(db);
+        skillQuery.prepare("SELECT skill_id FROM Skills WHERE skill_name = :skill_name");
+        skillQuery.bindValue(":skill_name", trimmedSkill);
+        if (skillQuery.exec() && skillQuery.next()) {
+            skillId = skillQuery.value("skill_id").toInt();
+        } else {
+            QSqlQuery insertSkillQuery(db);
+            insertSkillQuery.prepare("INSERT INTO Skills (skill_name) VALUES (:skill_name)");
+            insertSkillQuery.bindValue(":skill_name", trimmedSkill);
+            if (!insertSkillQuery.exec()) {
+                QMessageBox::critical(this, "Database Error", "Failed to insert new skill: " + insertSkillQuery.lastError().text());
+                query.exec("ROLLBACK");
+                return;
+            }
+            skillId = insertSkillQuery.lastInsertId().toInt();
+        }
+        QSqlQuery jobSkillQuery(db);
+        jobSkillQuery.prepare("INSERT INTO JobSkills (job_id, skill_id) VALUES (:job_id, :skill_id)");
+        jobSkillQuery.bindValue(":job_id", jobId);
+        jobSkillQuery.bindValue(":skill_id", skillId);
+        if (!jobSkillQuery.exec()) {
+            QMessageBox::critical(this, "Database Error", "Failed to link skill to job: " + jobSkillQuery.lastError().text());
+            query.exec("ROLLBACK");
+            return;
+        }
+    }
+
     addJobNode(jobId, title, description, experienceRequired, salaryRange, deadlineStr);
     QMessageBox::information(this, "Success", "Job posted successfully!");
     ui->jobTitleLineEdit->clear();
@@ -403,7 +434,7 @@ void DashboardEmployer::on_shortlistButton_clicked()
         return;
     }
 
-    QSqlDatabase db = dbManager->getDatabase();
+    QSqlDatabase db = DBManager::getInstance().getDatabase();
     if (!db.isOpen()) {
         QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
         return;
@@ -512,7 +543,7 @@ void DashboardEmployer::on_applicantsTable_cellClicked(int row, int column)
     if (column == 4 && ui->applicantsTable->item(row, 4)->text() == "View Details") {
         int seekerId = ui->applicantsTable->item(row, 1)->text().toInt();
         int jobId = ui->applicantsTable->item(row, 0)->text().toInt();
-        QSqlDatabase db = dbManager->getDatabase();
+        QSqlDatabase db = DBManager::getInstance().getDatabase();
         if (!db.isOpen()) {
             QMessageBox::critical(this, "Database Error", "Database connection failed: " + db.lastError().text());
             return;

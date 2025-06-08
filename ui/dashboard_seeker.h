@@ -17,6 +17,7 @@ public:
     explicit DashboardSeeker(QWidget *parent = nullptr);
     ~DashboardSeeker();
     void setSeekerUserId(int userId);
+    void setSeekerDetails(const QString& skills, const QString& education, const QString& workExperience);
 
 private slots:
     void on_applyButton_clicked();
@@ -31,12 +32,18 @@ private:
     DBManager *dbManager;
     int seekerUserId;
     JobNode* jobHead;
+    QString seekerSkills;
+    QString seekerEducation;
+    QString seekerWorkExperience;
 
     void loadJobsTable();
     void loadProfile();
     void loadApplicationsTable();
     void initializeLinkedList();
-    void addToLinkedList(int jobId, const QString& title, const QString& company, const QString& location, const QString& salary, const QString& deadline);
+    void addToLinkedList(int jobId, const QString& title, const QString& company, const QString& location,
+                         const QString& salary, const QString& deadline, const QString& jobType,
+                         const QString& workMode, const QString& industry, const QString& skillsRequired,
+                         const QString& additionalDetails);
     void sortLinkedList(bool bySalary, bool ascending);
     void mergeSort(JobNode** headRef, bool bySalary, bool ascending);
     void splitList(JobNode* head, JobNode** left, JobNode** right);
